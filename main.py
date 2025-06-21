@@ -8,57 +8,36 @@ from qiskit_aer import Aer
 from qiskit.visualization import plot_histogram
 
 '''
-Necesitamos el oraculo f que nos va cambiar el signo del estado
-si es el que estamos buscando o lo va a dejar igual si no es el que queremos.
-
-Después necesitamos un amplificador que nos va a ir haciendo las reflexiones.
-
-Pasos
-
-Poner todos los qubits en superposición
-Aplicar el oráculo
-Aplicar el amplificador
-Repetir
-
-n = 3 qubits. N = 2^3 = 8 estados en la base computacional.
-
-|000 >, |001 >, |010 >, |011 >,
-|100 >, |101 >, |110 >, |111 >
-
-Queremos encontrar x = 110.
+TODO: Add brief explanation of Grover's algorithm
 '''
 
 
 def mcz4() -> QuantumCircuit:
     """
-    Compuerta multicontrolada Z de 4 qubits
+    Multicontrolled Z gate with 3 control qubits and 1 target qubit.
     """
     return MCMTGate(gate=CZGate(), num_ctrl_qubits=3, num_target_qubits=1, label="MCZ4")
 
 
 def oraculo(n_qubits: int) -> QuantumCircuit:
     """
-    n_qubits: int tamaño del circuito
+    n_qubits: circuit size
 
-    Acá definimos el oraculo.
+    Marked stats:
 
-    O|y> =  |y > si y != (|1110> o |1101>)
-    O|y> = -|y > si y == |1110> o |1101>:
+    O|y> =  |y > iff y != |1110> or |1101>
+    O|y> = -|y > iff y == |1110> or |1101>:
 
     """
     circuito = QuantumCircuit(n_qubits)
 
-    # Marcamos |1110>
-    # Cambiamos el estado del qubit 0 a |1>
-    # Si encontramos que todos los qubits son |11>, entonces cambiamos el signo a q2
-    # volvemos el qubit 0 a su estado original
-    circuito.x(0)
+    # |1110>
+    circuito.x(0)  # |1110> -> |1111>
     cccz = mcz4()
     circuito.compose(cccz, qubits=[0, 1, 2, 3], inplace=True)
     circuito.x(0)
 
-    # Marcamos |1101>
-    # marca |1111> (que era |1101> original)
+    # |1101>
     circuito.x(1)  # |1101> -> |1111>
     cccz = mcz4()
     circuito.compose(cccz, qubits=[0, 1, 2, 3], inplace=True)
@@ -69,24 +48,20 @@ def oraculo(n_qubits: int) -> QuantumCircuit:
 
 def difusor(n_qubits: int) -> QuantumCircuit:
     """
-    n_qubits: int tamaño del circuito
-    Definimos el difusor
+    n_qubits: circuit size
 
     D = 2 |I0><I0| - Id
+    To apply a reflextion about the state |I0> we need to apply to all qubits:
 
-    Para lograr una reflexión respecto al estado |I0> tenemos que hacer
-    H a todo
-    X a todo
+    H 
+    X
     MCZ: z multicontrolada
-    X a todo
-    H a todo
+    X
+    H 
 
     """
     circuito = QuantumCircuit(n_qubits)
     qubits = range(n_qubits)
-    # Aplicamos Hadamard a todos los qubits
-    # Aplicamos NOT a todos los qubits
-    # Aplicamos la compuerta multicontrolada Z igual que en el oráculo
     circuito.h(qubits)
     circuito.x(qubits)
     cccz = mcz4()
@@ -102,10 +77,7 @@ n = 4
 qubits = range(n)
 circuito = QuantumCircuit(n, n)
 
-estado_0 = Statevector(circuito)
-# print(f"Estado inicial: {estado_0}")
-# Inicializar el estado |I0>
-# Esto es, aplicar la compuerta Hadamard a todos los qubits
+# estado_0 = Statevector(circuito)
 circuito.h(qubits)
 circuito.barrier()
 
@@ -119,29 +91,18 @@ print('Las iteraciones son:', iteraciones)
 ora = oraculo(n)
 dif = difusor(n)
 
-k = 10
-
-
-for i in range(k):
-    # Aplicamos el oráculo
+for _ in range(iteraciones):
+    # Oracle
     circuito = circuito.compose(ora)
     circuito.barrier()
-    # estado = Statevector(circuito)
-    # print(f"Iteración {i+1}: Estado actual: {estado}")
 
-    # Aplicamos el difusor
+    # Difusor
     circuito = circuito.compose(dif)
     circuito.barrier()
-    # estado = Statevector(circuito)
-    # print(f"Iteración {i+1}: Estado actual: {estado}")
-    # matriz = Operator(circuito)
-
 
 # Medimos los qubits
 circuito.measure(qubits, qubits)
 circuito.draw("mpl")
-plt.savefig(f'circuito_grover_n4_{k}.pdf')
-
 
 # Simulamos el circuito
 simulador = Aer.get_backend("aer_simulator")
@@ -150,10 +111,3 @@ job = simulador.run(transpile(circuito, simulador), shots=1024)
 resultados = job.result()
 counts = resultados.get_counts(circuito)
 plot_histogram(counts)
-plt.savefig(f"k_{k}_iteraciones.pdf")
-
-
-# Agrego un qubit mas
-# Miramos como cambia iteracion a iteracion el histograma
-
-# Curiosidad: Implementacion diccionario

@@ -5,4 +5,4 @@ To run
 python3 main.py
 ```
 
-
+It will print a circuit diagram and the result of the Grover's algorithm.
