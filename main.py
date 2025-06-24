@@ -19,7 +19,7 @@ def mcz4() -> QuantumCircuit:
     return MCMTGate(gate=CZGate(), num_ctrl_qubits=3, num_target_qubits=1, label="MCZ4")
 
 
-def oraculo(n_qubits: int) -> QuantumCircuit:
+def oracle(n_qubits: int) -> QuantumCircuit:
     """
     n_qubits: circuit size
 
@@ -46,7 +46,7 @@ def oraculo(n_qubits: int) -> QuantumCircuit:
     return circuito
 
 
-def difusor(n_qubits: int) -> QuantumCircuit:
+def diffuser(n_qubits: int) -> QuantumCircuit:
     """
     n_qubits: circuit size
 
@@ -55,7 +55,7 @@ def difusor(n_qubits: int) -> QuantumCircuit:
 
     H 
     X
-    MCZ: z multicontrolada
+    MCZ
     X
     H 
 
@@ -77,36 +77,31 @@ n = 4
 qubits = range(n)
 circuito = QuantumCircuit(n, n)
 
-# estado_0 = Statevector(circuito)
 circuito.h(qubits)
 circuito.barrier()
 
+# Optimum number of iterations
+iterations = int(floor((pi / 4) * sqrt(2 ** n))-1)
 
-# Para saber cuántas iteraciones necesitamos, usamos la fórmula vista
-# en clase y nos queda que iteraciones ~ (pi/4) * sqrt(N) = (pi/4) * sqrt(8) = 2.22
-iteraciones = int(floor((pi / 4) * sqrt(2 ** n))-1)
-print('Las iteraciones son:', iteraciones)
+# Oracle and Diffuser
+ora = oracle(n)
+dif = diffuser(n)
 
-# 'instanciamos' el oráculo y el difusor
-ora = oraculo(n)
-dif = difusor(n)
-
-for _ in range(iteraciones):
+for _ in range(iterations):
     # Oracle
     circuito = circuito.compose(ora)
     circuito.barrier()
 
-    # Difusor
+    # Diffuser
     circuito = circuito.compose(dif)
     circuito.barrier()
 
-# Medimos los qubits
+# Measure
 circuito.measure(qubits, qubits)
 circuito.draw("mpl")
 
-# Simulamos el circuito
+# Simulation
 simulador = Aer.get_backend("aer_simulator")
-# los shots son cuantas veces vamos a medir el circuito
 job = simulador.run(transpile(circuito, simulador), shots=1024)
 resultados = job.result()
 counts = resultados.get_counts(circuito)
